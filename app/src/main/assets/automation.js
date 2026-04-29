@@ -12,7 +12,11 @@
         const choices = [];
         inputs.forEach(inp => {
             if (inp.value === "-1") return;
-            const labelText = document.querySelector(`label[for="${inp.id}"]`)?.innerText.trim() || "";
+            const labelId = inp.getAttribute('aria-labelledby');
+            let labelText = labelId ? document.getElementById(labelId)?.innerText.trim() : "";
+            if (!labelText) {
+                labelText = document.querySelector(`label[for="${inp.id}"]`)?.innerText.trim() || "";
+            }
             choices.push({ id: inp.id, name: inp.name, value: inp.value, text: labelText });
         });
         if (choices.length > 0) {
@@ -26,9 +30,10 @@
         const input = document.querySelector(`input[type="radio"][value="${selectedValue}"]`);
         if (input) {
             input.click();
+            const delay = Math.floor(Math.random() * 2000) + 1500;
             setTimeout(() => {
                 document.getElementById('mod_quiz-next-nav')?.click();
-            }, 2000);
+            }, delay);
         }
     };
     setTimeout(scanPage, 1500);
