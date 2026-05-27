@@ -344,8 +344,7 @@ fun MainScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
                             
-                            /* Simple floating UI design placeholder */
-// API Key List Management Section
+                            // API Key List Management Section
                             val apiKeysList = remember(apiKey) {
                                 apiKey.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                             }
@@ -458,7 +457,8 @@ fun MainScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Google Search Grounding Toggle
+                            /* Chips added */
+// Google Search Grounding Toggle
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
