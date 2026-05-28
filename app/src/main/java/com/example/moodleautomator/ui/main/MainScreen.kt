@@ -457,8 +457,7 @@ fun MainScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            /* Chips added */
-// Google Search Grounding Toggle
+                            // Google Search Grounding Toggle
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -554,7 +553,8 @@ fun MainScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Model selector and Active/Pause button
+                            /* Settings added */
+// Model selector and Active/Pause button
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
