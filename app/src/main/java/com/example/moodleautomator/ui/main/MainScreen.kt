@@ -553,8 +553,7 @@ fun MainScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            /* Settings added */
-// Model selector and Active/Pause button
+                            // Model selector and Active/Pause button
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
