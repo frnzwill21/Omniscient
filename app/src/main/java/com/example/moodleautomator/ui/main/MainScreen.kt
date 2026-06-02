@@ -95,6 +95,10 @@ fun MainScreen(
 
     fun addLog(message: String) {
         logs = (logs + message).takeLast(20) // Keep last 20 logs
+        val level = if (message.startsWith("ERROR") || message.startsWith("❌")) "ERROR"
+                    else if (message.startsWith("⚠️") || message.startsWith("warning")) "WARNING"
+                    else "INFO"
+        com.example.moodleautomator.FileLogger.log(level, "Automation", message)
     }
 
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
@@ -610,12 +614,31 @@ fun MainScreen(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "Bersihkan Log",
-                            color = Color(0x66FFFFFF),
-                            fontSize = 11.sp,
-                            modifier = Modifier.clickable { logs = listOf("Log dibersihkan.") }
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                text = "Bagikan Log",
+                                color = Color(0xFF00FFFF),
+                                fontSize = 11.sp,
+                                modifier = Modifier.clickable {
+                                    val logContent = com.example.moodleautomator.FileLogger.getLogContent()
+                                    val shareIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(android.content.Intent.EXTRA_TEXT, logContent)
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Bagikan Log Debug"))
+                                }
+                            )
+                            Text(
+                                text = "Bersihkan Log",
+                                color = Color(0x66FFFFFF),
+                                fontSize = 11.sp,
+                                modifier = Modifier.clickable { 
+                                    logs = listOf("Log dibersihkan.") 
+                                    com.example.moodleautomator.FileLogger.clearLogs()
+                                }
+                            )
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(4.dp))

@@ -13,6 +13,7 @@ import com.example.moodleautomator.theme.MoodleAutomatorTheme
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    FileLogger.init(applicationContext)
 
     enableEdgeToEdge()
     setContent {
