@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation3.runtime.NavKey
 import com.example.moodleautomator.MoodleBridge
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -77,6 +80,7 @@ fun MainScreen(
     var logs by remember { mutableStateOf(listOf("Sistem siap. Silakan login di kuis Moodle.")) }
     var showApiKey by remember { mutableStateOf(false) }
     var isPanelExpanded by remember { mutableStateOf(true) }
+    var isMinimized by remember { mutableStateOf(false) }
 
     // Save configurations helper
     fun saveConfigs() {
@@ -152,7 +156,10 @@ fun MainScreen(
         )
 
         // Premium floating control panel (Glassmorphism & Gradient Glow)
-        Box(
+        AnimatedVisibility(
+            visible = !isMinimized,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
@@ -211,41 +218,62 @@ fun MainScreen(
                             )
                         }
 
-                        // Status Badge
-                        val badgeBg = if (isAutomationEnabled) Color(0xFF00FF87) else Color(0xFFFF5252)
-                        val badgeText = if (isAutomationEnabled) "ACTIVE" else "PAUSED"
-                        
-                        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                        val scale by infiniteTransition.animateFloat(
-                            initialValue = 0.95f,
-                            targetValue = 1.05f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(1000, easing = LinearEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "scale"
-                        )
-                        
-                        Box(
-                            modifier = Modifier
-                                .graphicsLayer {
-                                    if (isAutomationEnabled) {
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                }
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(badgeBg.copy(alpha = 0.2f))
-                                .border(1.dp, badgeBg, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        // Status Badge & Minimize Button
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = badgeText,
-                                color = badgeBg,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp
+                            val badgeBg = if (isAutomationEnabled) Color(0xFF00FF87) else Color(0xFFFF5252)
+                            val badgeText = if (isAutomationEnabled) "ACTIVE" else "PAUSED"
+                            
+                            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                            val scale by infiniteTransition.animateFloat(
+                                initialValue = 0.95f,
+                                targetValue = 1.05f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(1000, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "scale"
                             )
+                            
+                            Box(
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        if (isAutomationEnabled) {
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }
+                                    }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(badgeBg.copy(alpha = 0.2f))
+                                    .border(1.dp, badgeBg, RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = badgeText,
+                                    color = badgeBg,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+
+                            // Minimize Button
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0x22FFFFFF))
+                                    .clickable { isMinimized = true }
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "➡️ Sembunyikan",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
@@ -625,6 +653,36 @@ fun MainScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Minimized handle on the right side of the screen
+        AnimatedVisibility(
+            visible = isMinimized,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.CenterEnd)
+        ) {
+            val dragStart = rememberDraggableState { delta ->
+                if (delta < -10) isMinimized = false
+            }
+            Box(
+                modifier = Modifier
+                    .width(42.dp)
+                    .height(90.dp)
+                    .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+                    .background(Color(0xDD17172B))
+                    .border(1.5.dp, Brush.linearGradient(listOf(Color(0xFF8A2BE2), Color(0xFF00FFFF))), RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+                    .draggable(state = dragStart, orientation = Orientation.Horizontal)
+                    .clickable { isMinimized = false }
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text("◀", color = Color(0xFF00FFFF), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("🤖", color = Color.White, fontSize = 18.sp)
                 }
             }
         }
