@@ -617,6 +617,9 @@ fun MainScreen(
                                         } else {
                                             isAutomationEnabled = !isAutomationEnabled
                                             addLog(if (isAutomationEnabled) "Otomatisasi diaktifkan." else "Otomatisasi dijeda.")
+                                            if (isAutomationEnabled) {
+                                                webViewInstance?.evaluateJavascript("javascript:if(typeof window.startScan === 'function') window.startScan();", null)
+                                            }
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(

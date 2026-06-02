@@ -36,7 +36,7 @@
     }
 
     // Helper function to extract question and choices
-    function scanPage() {
+    function scanPage(force = false) {
         // Moodle questions are usually in div.que
         const queDiv = document.querySelector('div.que');
         if (!queDiv) {
@@ -44,8 +44,10 @@
             return;
         }
 
-        // Check if already processed to avoid infinite loop
-        if (queDiv.dataset.processed === "true") {
+        if (force === true) {
+            console.log("Forcing scan: clearing processed state.");
+            delete queDiv.dataset.processed;
+        } else if (queDiv.dataset.processed === "true") {
             console.log("Question already processed.");
             return;
         }
@@ -162,6 +164,12 @@
         } else {
             console.error("Could not find radio option with value:", selectedValue);
         }
+    };
+
+    // Expose startScan function to Android to trigger scan manually
+    window.startScan = function() {
+        console.log("startScan called from Android");
+        scanPage(true);
     };
 
     // Run scan on load

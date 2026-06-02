@@ -120,19 +120,41 @@ class MoodleBridge(
                         }
                         success = true
                         break // Succeeded! Stop retry loop
-                    } else if (geminiResponse.isNetworkError) {
-                        networkRetryCount++
                     } else {
-                        // Quota limit error: break retry and rotate key
-                        onLog("⚠️ $keyLogName kuota habis / ditolak server.")
-                        break
+                        // Handle specific error types
+                        when (geminiResponse.errorType) {
+                            GeminiError.NETWORK_ERROR -> {
+                                networkRetryCount++
+                                onLog("⚠️ Gangguan Jaringan: ${geminiResponse.errorMessage ?: "Koneksi terputus/timeout"}")
+                            }
+                            GeminiError.RATE_LIMIT_EXCEEDED -> {
+                                onLog("⚠️ $keyLogName Limit Tercapai (429): ${geminiResponse.errorMessage ?: "Kuota habis atau terlalu banyak request"}.")
+                                break // Stop retrying this key, move to rotation
+                            }
+                            GeminiError.BAD_REQUEST -> {
+                                onLog("❌ ERROR $keyLogName (400 Bad Request): ${geminiResponse.errorMessage ?: "Format request salah / tipe model tidak cocok"}.")
+                                break // Rotate key / stop
+                            }
+                            GeminiError.UNAUTHORIZED -> {
+                                onLog("❌ ERROR $keyLogName (401 Unauthorized): Kunci API tidak valid atau tidak memiliki akses.")
+                                break // Rotate key
+                            }
+                            GeminiError.SERVER_ERROR -> {
+                                onLog("⚠️ Gemini Server Down (503): ${geminiResponse.errorMessage ?: "Layanan tidak tersedia"}. Mencoba kembali...")
+                                networkRetryCount++
+                            }
+                            else -> {
+                                onLog("⚠️ Kesalahan Tidak Dikenal: ${geminiResponse.errorMessage ?: "Tidak ada detail"}")
+                                networkRetryCount++
+                            }
+                        }
                     }
                 }
 
                 if (success) break
                 
                 if (networkRetryCount >= maxNetworkRetries) {
-                    onLog("❌ ERROR: Koneksi internet terputus permanen. Otomatisasi kuis terpaksa DIJEDA.")
+                    onLog("❌ ERROR: Percobaan jaringan gagal permanen. Otomatisasi kuis DIJEDA.")
                     isInternetDown = true
                     withContext(Dispatchers.Main) {
                         pauseAutomation()

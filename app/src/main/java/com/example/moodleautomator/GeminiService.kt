@@ -9,13 +9,23 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+enum class GeminiError {
+    NONE,
+    NETWORK_ERROR,
+    RATE_LIMIT_EXCEEDED,
+    BAD_REQUEST,
+    UNAUTHORIZED,
+    SERVER_ERROR,
+    UNKNOWN
+}
+
 data class GeminiResponse(
     val answer: String?,
     val promptTokens: Int = 0,
     val completionTokens: Int = 0,
     val totalTokens: Int = 0,
-    val isNetworkError: Boolean = false,
-    val isQuotaError: Boolean = false
+    val errorType: GeminiError = GeminiError.NONE,
+    val errorMessage: String? = null
 )
 
 object GeminiService {
@@ -147,13 +157,30 @@ object GeminiService {
             } else {
                 val errorText = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                 Log.e(TAG, "HTTP Error $responseCode: $errorText")
-                val isQuota = responseCode == 429 || errorText.contains("RESOURCE_EXHAUSTED", ignoreCase = true)
-                return@withContext GeminiResponse(null, isQuotaError = isQuota, isNetworkError = !isQuota)
+                val errorType = when (responseCode) {
+                    400 -> GeminiError.BAD_REQUEST
+                    401, 403 -> GeminiError.UNAUTHORIZED
+                    429 -> GeminiError.RATE_LIMIT_EXCEEDED
+                    in 500..599 -> GeminiError.SERVER_ERROR
+                    else -> GeminiError.UNKNOWN
+                }
+                
+                var cleanMessage = errorText
+                try {
+                    val errorObj = JSONObject(errorText).getJSONObject("error")
+                    cleanMessage = errorObj.getString("message")
+                } catch (e: Exception) {}
+                
+                return@withContext GeminiResponse(null, errorType = errorType, errorMessage = cleanMessage)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error calling Gemini API", e)
-            val isNet = e is java.io.IOException || e is java.net.SocketTimeoutException || e is java.net.UnknownHostException
-            return@withContext GeminiResponse(null, isNetworkError = isNet)
+            val errorType = if (e is java.io.IOException || e is java.net.SocketTimeoutException || e is java.net.UnknownHostException) {
+                GeminiError.NETWORK_ERROR
+            } else {
+                GeminiError.UNKNOWN
+            }
+            return@withContext GeminiResponse(null, errorType = errorType, errorMessage = e.message)
         }
     }
 }
