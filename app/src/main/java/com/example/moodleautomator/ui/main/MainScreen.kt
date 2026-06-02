@@ -206,7 +206,7 @@ fun MainScreen(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = screenHeight * 0.65f)
+                    .heightIn(min = screenHeight * 0.6f, max = screenHeight * 0.82f)
                     .border(
                         width = 1.5.dp,
                         brush = Brush.verticalGradient(
@@ -537,7 +537,7 @@ fun MainScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp)
+                                .height(180.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFF07070F))
                                 .border(1.dp, Color(0x11FFFFFF), RoundedCornerShape(8.dp))
@@ -768,8 +768,9 @@ fun MainScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(65.dp)
                             .background(Color(0xFF04040A), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         displayLogs.forEach { logMsg ->
                             Text(
