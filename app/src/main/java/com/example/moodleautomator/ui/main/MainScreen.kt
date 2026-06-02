@@ -220,7 +220,7 @@ fun MainScreen(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .padding(horizontal = paddingMedium, vertical = paddingMedium)
                 ) {
                     // Pull/Drag Indicator
@@ -262,7 +262,7 @@ fun MainScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f, fill = false)
+                            .weight(1f, fill = true)
                             .verticalScroll(rememberScrollState())
                     ) {
                         // API Key List Management Section
@@ -618,6 +618,7 @@ fun MainScreen(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .defaultMinSize(minHeight = 140.dp)
                     .border(
                         width = 1.5.dp,
                         brush = Brush.linearGradient(
@@ -639,7 +640,7 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = paddingSmall)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
                 ) {
                     // Control elements in a horizontal Row
                     Row(
@@ -759,7 +760,7 @@ fun MainScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Mini Log display (last 1-2 items)
                     val displayLogs = remember(logs) {
@@ -768,7 +769,7 @@ fun MainScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(65.dp)
+                            .height(75.dp)
                             .background(Color(0xFF04040A), RoundedCornerShape(8.dp))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
