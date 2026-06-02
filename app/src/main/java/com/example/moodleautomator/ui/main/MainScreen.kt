@@ -78,31 +78,6 @@ fun MainScreen(
     var showApiKey by remember { mutableStateOf(false) }
     var isPanelExpanded by remember { mutableStateOf(true) }
 
-    // Quota tracking
-    val currentDayKey = remember { 
-        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) 
-    }
-    
-    var dailyRequests by remember { 
-        mutableStateOf(
-            if (sharedPrefs.getString("last_date", "") == currentDayKey) {
-                sharedPrefs.getInt("daily_requests", 0)
-            } else {
-                0
-            }
-        )
-    }
-    
-    var dailyTokens by remember { 
-        mutableStateOf(
-            if (sharedPrefs.getString("last_date", "") == currentDayKey) {
-                sharedPrefs.getInt("daily_tokens", 0)
-            } else {
-                0
-            }
-        )
-    }
-
     // Save configurations helper
     fun saveConfigs() {
         sharedPrefs.edit().apply {
@@ -110,18 +85,6 @@ fun MainScreen(
             putString("selected_model", selectedModel)
             putInt("thinking_budget", thinkingBudget)
             putBoolean("enable_search", enableSearch)
-            apply()
-        }
-    }
-
-    // Sync usage updates helper
-    val onUsageUpdated: (Int, Int) -> Unit = { reqInc, tokenInc ->
-        dailyRequests += reqInc
-        dailyTokens += tokenInc
-        sharedPrefs.edit().apply {
-            putString("last_date", currentDayKey)
-            putInt("daily_requests", dailyRequests)
-            putInt("daily_tokens", dailyTokens)
             apply()
         }
     }
@@ -168,7 +131,6 @@ fun MainScreen(
                         }
                     }
 
-                    // Add JavaScript Bridge
                     val bridge = MoodleBridge(
                         webView = this,
                         scope = coroutineScope,
@@ -177,7 +139,6 @@ fun MainScreen(
                         isAutomationEnabled = { isAutomationEnabled },
                         getThinkingBudget = { thinkingBudget },
                         getEnableSearch = { enableSearch },
-                        onUsageUpdated = { reqInc, tokenInc -> onUsageUpdated(reqInc, tokenInc) },
                         pauseAutomation = { isAutomationEnabled = false },
                         onLog = { msg -> addLog(msg) }
                     )
@@ -297,52 +258,7 @@ fun MainScreen(
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Spacer(modifier = Modifier.height(10.dp))
                             
-                            // Warning Banner if requests exceed 70% (70% of 1500 = 1050)
-                            if (dailyRequests >= 1050) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0x33FF9800))
-                                        .border(1.dp, Color(0xFFFF9800), RoundedCornerShape(12.dp))
-                                        .padding(8.dp)
-                                ) {
-                                    Text(
-                                        text = "⚠️ PERINGATAN: Penggunaan kuota harian Anda telah mencapai ${((dailyRequests.toFloat() / 1500f) * 100).toInt()}% (${dailyRequests}/1500 request). Kuota akan di-refresh pukul 15:00 WIB (00:00 PST).",
-                                        color = Color(0xFFFF9800),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            // Quota usage indicators
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Kuota Hari Ini: $dailyRequests / 1500 request ($dailyTokens tokens)",
-                                    color = Color(0xBBFFFFFF),
-                                    fontSize = 11.sp
-                                )
-                                Text(
-                                    text = "Reset: 15:00 WIB",
-                                    color = Color(0x88FFFFFF),
-                                    fontSize = 10.sp
-                                )
-                            }
-                            
-                            // Linear progress indicator for request usage
-                            LinearProgressIndicator(
-                                progress = { (dailyRequests.toFloat() / 1500f).coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-                                color = if (dailyRequests >= 1050) Color(0xFFFF9800) else Color(0xFF00FFFF),
-                                trackColor = Color(0x22FFFFFF)
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             
                             // API Key List Management Section
                             val apiKeysList = remember(apiKey) {

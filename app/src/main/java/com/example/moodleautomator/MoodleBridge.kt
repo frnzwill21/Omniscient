@@ -17,7 +17,6 @@ class MoodleBridge(
     private val isAutomationEnabled: () -> Boolean,
     private val getThinkingBudget: () -> Int,
     private val getEnableSearch: () -> Boolean,
-    private val onUsageUpdated: (Int, Int) -> Unit, // (requestIncrement, tokenIncrement)
     private val pauseAutomation: () -> Unit, // Force pause on network failure
     private val onLog: (String) -> Unit
 ) {
@@ -111,9 +110,6 @@ class MoodleBridge(
                     if (answerValue != null) {
                         onLog("Gemini memilih opsi value: $answerValue (${duration}ms) via $keyLogName")
                         onLog("-> Penggunaan token: ${geminiResponse.totalTokens} tokens (Prompt: ${geminiResponse.promptTokens}, Completion: ${geminiResponse.completionTokens})")
-                        
-                        // Update local usage state
-                        onUsageUpdated(1, geminiResponse.totalTokens)
                         
                         withContext(Dispatchers.Main) {
                             webView.evaluateJavascript("javascript:window.selectAnswerAndNext('$answerValue');", null)
