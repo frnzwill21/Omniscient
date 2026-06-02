@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -79,8 +80,8 @@ fun MainScreen(
     var isAutomationEnabled by remember { mutableStateOf(false) }
     var logs by remember { mutableStateOf(listOf("Sistem siap. Silakan login di kuis Moodle.")) }
     var showApiKey by remember { mutableStateOf(false) }
-    var isPanelExpanded by remember { mutableStateOf(true) }
     var isMinimized by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     // Save configurations helper
     fun saveConfigs() {
@@ -159,7 +160,432 @@ fun MainScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Premium floating control panel (Glassmorphism & Gradient Glow)
+        // Settings Overlay / Custom Bottom Sheet Scrim
+        AnimatedVisibility(
+            visible = showSettings,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable { showSettings = false }
+            )
+        }
+
+        // Slide-Up Settings Panel (Custom Bottom Sheet)
+        AnimatedVisibility(
+            visible = showSettings,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+        ) {
+            ElevatedCard(
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = Color(0xF20F0F1E) // Premium dark obsidian glass
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp)
+                    .border(
+                        width = 1.5.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF8A2BE2), // Electric Purple
+                                Color(0x2200FFFF)  // Faded Cyan
+                            )
+                        ),
+                        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                ) {
+                    // Pull/Drag Indicator
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(40.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color(0x44FFFFFF))
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Title Header inside settings
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Konfigurasi Otomatisasi",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        IconButton(
+                            onClick = { showSettings = false },
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+                        ) {
+                            Text("✕", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Scrollable Configs Area
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        // API Key List Management Section
+                        val apiKeysList = remember(apiKey) {
+                            apiKey.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        }
+
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = newKeyInput,
+                                    onValueChange = { newKeyInput = it },
+                                    label = { Text("Tambah API Key Gemini", color = Color(0x88FFFFFF), fontSize = 11.sp) },
+                                    placeholder = { Text("AIzaSy...", color = Color(0x44FFFFFF)) },
+                                    visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showApiKey = !showApiKey }) {
+                                            Text(
+                                                text = if (showApiKey) "👁" else "🙈",
+                                                color = Color.White,
+                                                fontSize = 16.sp
+                                            )
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF8A2BE2),
+                                        unfocusedBorderColor = Color(0x44FFFFFF),
+                                        focusedLabelColor = Color(0xFF8A2BE2),
+                                        cursorColor = Color(0xFF8A2BE2)
+                                    ),
+                                    textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 12.sp),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Button(
+                                    onClick = {
+                                        val trimmed = newKeyInput.trim()
+                                        if (trimmed.isNotEmpty()) {
+                                            val currentKeys = apiKey.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                            if (!currentKeys.contains(trimmed)) {
+                                                val updatedKeys = currentKeys + trimmed
+                                                apiKey = updatedKeys.joinToString(",")
+                                                saveConfigs()
+                                                newKeyInput = ""
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8A2BE2)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.height(56.dp)
+                                ) {
+                                    Text("➕", color = Color.White, fontSize = 14.sp)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Horizontal Scrollable Row for API Key Chips
+                            if (apiKeysList.isNotEmpty()) {
+                                Text("Daftar API Key Anda (${apiKeysList.size}):", color = Color(0x88FFFFFF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    apiKeysList.forEachIndexed { index, key ->
+                                        val truncatedKey = if (key.length > 10) "${key.take(4)}...${key.takeLast(4)}" else key
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0x22FFFFFF))
+                                                .border(1.dp, Color(0x11FFFFFF), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "#${index + 1}: $truncatedKey",
+                                                    color = Color.White,
+                                                    fontSize = 10.sp,
+                                                    fontFamily = FontFamily.Monospace
+                                                )
+                                                Text(
+                                                    text = "❌",
+                                                    color = Color(0xFFFF5252),
+                                                    fontSize = 10.sp,
+                                                    modifier = Modifier.clickable {
+                                                        val updatedKeys = apiKeysList.toMutableList().apply { removeAt(index) }
+                                                        apiKey = updatedKeys.joinToString(",")
+                                                        saveConfigs()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("Belum ada API Key aktif. Masukkan & klik + untuk menambahkan.", color = Color(0xFFFF5252), fontSize = 10.sp)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Model Selector (Horizontal Alignment)
+                        var isDropdownExpanded by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Model Gemini", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Pilih model kecerdasan buatan", color = Color(0x88FFFFFF), fontSize = 10.sp)
+                            }
+                            Box {
+                                Button(
+                                    onClick = { isDropdownExpanded = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(selectedModel, color = Color.White, fontSize = 11.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("▼", color = Color.White, fontSize = 8.sp)
+                                }
+                                DropdownMenu(
+                                    expanded = isDropdownExpanded,
+                                    onDismissRequest = { isDropdownExpanded = false },
+                                    modifier = Modifier.background(Color(0xFF17172B))
+                                ) {
+                                    listOf(
+                                        "gemini-2.5-flash",
+                                        "gemini-2.5-pro",
+                                        "gemini-2.0-flash",
+                                        "gemini-2.0-pro-exp",
+                                        "gemini-1.5-flash",
+                                        "gemini-1.5-pro"
+                                    ).forEach { modelName ->
+                                        DropdownMenuItem(
+                                            text = { Text(modelName, color = Color.White, fontSize = 12.sp) },
+                                            onClick = {
+                                                selectedModel = modelName
+                                                isDropdownExpanded = false
+                                                saveConfigs()
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Google Search Grounding Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Google Search Grounding", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Mencari info real-time di internet", color = Color(0x88FFFFFF), fontSize = 10.sp)
+                            }
+                            Switch(
+                                checked = enableSearch,
+                                onCheckedChange = { 
+                                    enableSearch = it 
+                                    saveConfigs()
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color(0xFF00FFFF),
+                                    checkedTrackColor = Color(0x3300FFFF),
+                                    uncheckedThumbColor = Color(0xFF888888),
+                                    uncheckedTrackColor = Color(0x11FFFFFF)
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Reasoning Config
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Reasoning / Thinking Level", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Gunakan berpikir mendalam (2.0+)", color = Color(0x88FFFFFF), fontSize = 10.sp)
+                            }
+                            var isThinkingMenuExpanded by remember { mutableStateOf(false) }
+                            val thinkingText = when(thinkingBudget) {
+                                0 -> "Off"
+                                1024 -> "Standard (1K)"
+                                2048 -> "High (2K)"
+                                4096 -> "Ultra (4K)"
+                                else -> "Custom ($thinkingBudget)"
+                            }
+                            Box {
+                                Button(
+                                    onClick = { isThinkingMenuExpanded = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(thinkingText, color = Color.White, fontSize = 11.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("▼", color = Color.White, fontSize = 8.sp)
+                                }
+                                DropdownMenu(
+                                    expanded = isThinkingMenuExpanded,
+                                    onDismissRequest = { isThinkingMenuExpanded = false },
+                                    modifier = Modifier.background(Color(0xFF17172B))
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Off (Cepat & Hemat)", color = Color.White, fontSize = 12.sp) },
+                                        onClick = { 
+                                            thinkingBudget = 0 
+                                            isThinkingMenuExpanded = false
+                                            saveConfigs()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Standard (1024 tokens)", color = Color.White, fontSize = 12.sp) },
+                                        onClick = { 
+                                            thinkingBudget = 1024 
+                                            isThinkingMenuExpanded = false
+                                            saveConfigs()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("High (2048 tokens)", color = Color.White, fontSize = 12.sp) },
+                                        onClick = { 
+                                            thinkingBudget = 2048 
+                                            isThinkingMenuExpanded = false
+                                            saveConfigs()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Ultra (4096 tokens)", color = Color.White, fontSize = 12.sp) },
+                                        onClick = { 
+                                            thinkingBudget = 4096 
+                                            isThinkingMenuExpanded = false
+                                            saveConfigs()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Full Log Console inside Settings Bottom Sheet
+                        Text(
+                            text = "Konsol Log Lengkap:",
+                            color = Color(0xFF00FFFF),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF07070F))
+                                .border(1.dp, Color(0x11FFFFFF), RoundedCornerShape(8.dp))
+                                .padding(6.dp)
+                        ) {
+                            val listState = rememberLazyListState()
+                            LaunchedEffect(logs.size) {
+                                if (logs.isNotEmpty()) {
+                                    listState.animateScrollToItem(logs.size - 1)
+                                }
+                            }
+                            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                                items(logs) { logMsg ->
+                                    Text(
+                                        text = "> $logMsg",
+                                        color = if (logMsg.startsWith("ERROR") || logMsg.startsWith("❌")) Color(0xFFFF5252) else if (logMsg.contains("memilih") || logMsg.contains("aktif")) Color(0xFF00FF87) else Color(0xFFB0B0C3),
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Debug actions
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    val logContent = com.example.moodleautomator.FileLogger.getLogContent()
+                                    val shareIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(android.content.Intent.EXTRA_TEXT, logContent)
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Bagikan Log Debug"))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Bagikan Log", color = Color.White, fontSize = 11.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    logs = listOf("Log dibersihkan.") 
+                                    com.example.moodleautomator.FileLogger.clearLogs()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x11FFFFFF)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Bersihkan Log", color = Color(0xFF888888), fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Compact Control Bar (Tinggi kurang dari 110.dp)
         AnimatedVisibility(
             visible = !isMinimized,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -167,12 +593,12 @@ fun MainScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
             ElevatedCard(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = Color(0xDD17172B) // Transparent dark background
+                    containerColor = Color(0xEE09090F) // Translucent deep obsidian
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -181,14 +607,14 @@ fun MainScreen(
                         brush = Brush.linearGradient(
                             colors = listOf(
                                 Color(0xFF8A2BE2), // Electric Purple
-                                Color(0x3300FFFF)  // Cyan glow
+                                Color(0xFF00FFFF)  // Cyan glow
                             )
                         ),
-                        shape = RoundedCornerShape(24.dp)
+                        shape = RoundedCornerShape(16.dp)
                     )
                     .shadow(
-                        elevation = 16.dp,
-                        shape = RoundedCornerShape(24.dp),
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(16.dp),
                         clip = false,
                         ambientColor = Color(0xFF8A2BE2),
                         spotColor = Color(0xFF00FFFF)
@@ -197,36 +623,26 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    // Header with toggle collapse and Automation state badge
+                    // Control elements in a horizontal Row
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isPanelExpanded = !isPanelExpanded },
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "⚙",
-                                color = Color(0xFF00FFFF),
-                                fontSize = 18.sp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Gemini AI Control Panel",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-
-                        // Status Badge & Minimize Button
+                        // Title & Status Badge
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            Text(
+                                text = "🤖 Gemini Auto",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            
                             val badgeBg = if (isAutomationEnabled) Color(0xFF00FF87) else Color(0xFFFF5252)
                             val badgeText = if (isAutomationEnabled) "ACTIVE" else "PAUSED"
                             
@@ -249,431 +665,105 @@ fun MainScreen(
                                             scaleY = scale
                                         }
                                     }
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(badgeBg.copy(alpha = 0.2f))
-                                    .border(1.dp, badgeBg, RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .border(1.dp, badgeBg, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = badgeText,
                                     color = badgeBg,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 0.5.sp
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Black
                                 )
                             }
+                        }
 
-                            // Minimize Button
-                            Box(
+                        // Right side: Action Buttons
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Quick Play/Pause Toggle Button
+                            IconButton(
+                                onClick = {
+                                    if (apiKey.isEmpty() && !isAutomationEnabled) {
+                                        addLog("Harap masukkan API Key!")
+                                        showSettings = true
+                                    } else {
+                                        isAutomationEnabled = !isAutomationEnabled
+                                        addLog(if (isAutomationEnabled) "Otomatisasi diaktifkan." else "Otomatisasi dijeda.")
+                                        if (isAutomationEnabled) {
+                                            webViewInstance?.evaluateJavascript("javascript:if(typeof window.startScan === 'function') window.startScan();", null)
+                                        }
+                                    }
+                                },
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0x22FFFFFF))
-                                    .clickable { isMinimized = true }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .size(32.dp)
+                                    .background(
+                                        if (isAutomationEnabled) Color(0xFFFF5252) else Color(0xFF8A2BE2),
+                                        RoundedCornerShape(8.dp)
+                                    )
                             ) {
                                 Text(
-                                    text = "➡️ Sembunyikan",
+                                    text = if (isAutomationEnabled) "⏸" else "▶",
                                     color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                        }
-                    }
 
-                    // Collapsible Body
-                    AnimatedVisibility(
-                        visible = isPanelExpanded,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            
-                            Spacer(modifier = Modifier.height(4.dp))
-                            
-                            // API Key List Management Section
-                            val apiKeysList = remember(apiKey) {
-                                apiKey.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                            }
-
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedTextField(
-                                        value = newKeyInput,
-                                        onValueChange = { newKeyInput = it },
-                                        label = { Text("Tambah API Key Gemini", color = Color(0x88FFFFFF), fontSize = 11.sp) },
-                                        placeholder = { Text("Masukkan kunci API baru...", color = Color(0x44FFFFFF)) },
-                                        visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
-                                        trailingIcon = {
-                                            IconButton(onClick = { showApiKey = !showApiKey }) {
-                                                Text(
-                                                    text = if (showApiKey) "👁" else "🙈",
-                                                    color = Color.White,
-                                                    fontSize = 16.sp
-                                                )
-                                            }
-                                        },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF8A2BE2),
-                                            unfocusedBorderColor = Color(0x44FFFFFF),
-                                            focusedLabelColor = Color(0xFF8A2BE2),
-                                            cursorColor = Color(0xFF8A2BE2)
-                                        ),
-                                        textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 12.sp),
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp),
-                                        singleLine = true
-                                    )
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    Button(
-                                        onClick = {
-                                            val trimmed = newKeyInput.trim()
-                                            if (trimmed.isNotEmpty()) {
-                                                val currentKeys = apiKey.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                                                if (!currentKeys.contains(trimmed)) {
-                                                    val updatedKeys = currentKeys + trimmed
-                                                    apiKey = updatedKeys.joinToString(",")
-                                                    saveConfigs()
-                                                    newKeyInput = ""
-                                                }
-                                            }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8A2BE2)),
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier.height(56.dp)
-                                    ) {
-                                        Text("➕", color = Color.White, fontSize = 14.sp)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                // Horizontal Scrollable Row for API Key Chips
-                                if (apiKeysList.isNotEmpty()) {
-                                    Text("Daftar API Key Anda (${apiKeysList.size}):", color = Color(0x88FFFFFF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState())
-                                            .padding(vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        apiKeysList.forEachIndexed { index, key ->
-                                            val truncatedKey = if (key.length > 10) "${key.take(4)}...${key.takeLast(4)}" else key
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(Color(0x22FFFFFF))
-                                                    .border(1.dp, Color(0x11FFFFFF), RoundedCornerShape(8.dp))
-                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "#${index + 1}: $truncatedKey",
-                                                        color = Color.White,
-                                                        fontSize = 10.sp,
-                                                        fontFamily = FontFamily.Monospace
-                                                    )
-                                                    Text(
-                                                        text = "❌",
-                                                        color = Color(0xFFFF5252),
-                                                        fontSize = 10.sp,
-                                                        modifier = Modifier.clickable {
-                                                            val updatedKeys = apiKeysList.toMutableList().apply { removeAt(index) }
-                                                            apiKey = updatedKeys.joinToString(",")
-                                                            saveConfigs()
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    Text("Belum ada API Key aktif. Masukkan & klik + untuk menambahkan.", color = Color(0xFFFF5252), fontSize = 10.sp)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Google Search Grounding Toggle
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            // Settings Button ⚙️
+                            IconButton(
+                                onClick = { showSettings = true },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0x1AFFFFFF), RoundedCornerShape(8.dp))
                             ) {
-                                Column {
-                                    Text("Google Search Grounding", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Text("Mencari info real-time di internet", color = Color(0x88FFFFFF), fontSize = 10.sp)
-                                }
-                                Switch(
-                                    checked = enableSearch,
-                                    onCheckedChange = { 
-                                        enableSearch = it 
-                                        saveConfigs()
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFF00FFFF),
-                                        checkedTrackColor = Color(0x3300FFFF),
-                                        uncheckedThumbColor = Color(0xFF888888),
-                                        uncheckedTrackColor = Color(0x11FFFFFF)
-                                    )
+                                Text(
+                                    text = "⚙️",
+                                    color = Color.White,
+                                    fontSize = 12.sp
                                 )
                             }
 
-                            // Reasoning Config
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            // Minimize Button ➡️
+                            IconButton(
+                                onClick = { isMinimized = true },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0x1AFFFFFF), RoundedCornerShape(8.dp))
                             ) {
-                                Column {
-                                    Text("Reasoning / Thinking Level", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Text("Gunakan berpikir mendalam (2.0+)", color = Color(0x88FFFFFF), fontSize = 10.sp)
-                                }
-                                var isThinkingMenuExpanded by remember { mutableStateOf(false) }
-                                val thinkingText = when(thinkingBudget) {
-                                    0 -> "Off"
-                                    1024 -> "Standard (1K)"
-                                    2048 -> "High (2K)"
-                                    4096 -> "Ultra (4K)"
-                                    else -> "Custom ($thinkingBudget)"
-                                }
-                                Box {
-                                    Button(
-                                        onClick = { isThinkingMenuExpanded = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(thinkingText, color = Color.White, fontSize = 11.sp)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("▼", color = Color.White, fontSize = 8.sp)
-                                    }
-                                    DropdownMenu(
-                                        expanded = isThinkingMenuExpanded,
-                                        onDismissRequest = { isThinkingMenuExpanded = false },
-                                        modifier = Modifier.background(Color(0xFF17172B))
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Off (Cepat & Hemat)", color = Color.White, fontSize = 12.sp) },
-                                            onClick = { 
-                                                thinkingBudget = 0 
-                                                isThinkingMenuExpanded = false
-                                                saveConfigs()
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Standard (1024 tokens)", color = Color.White, fontSize = 12.sp) },
-                                            onClick = { 
-                                                thinkingBudget = 1024 
-                                                isThinkingMenuExpanded = false
-                                                saveConfigs()
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("High (2048 tokens)", color = Color.White, fontSize = 12.sp) },
-                                            onClick = { 
-                                                thinkingBudget = 2048 
-                                                isThinkingMenuExpanded = false
-                                                saveConfigs()
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Ultra (4096 tokens)", color = Color.White, fontSize = 12.sp) },
-                                            onClick = { 
-                                                thinkingBudget = 4096 
-                                                isThinkingMenuExpanded = false
-                                                saveConfigs()
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Model selector and Active/Pause button
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Editable model selector dropdown
-                                var isDropdownExpanded by remember { mutableStateOf(false) }
-                                Box(modifier = Modifier.fillMaxWidth(0.48f)) {
-                                    OutlinedTextField(
-                                        value = selectedModel,
-                                        onValueChange = { 
-                                            selectedModel = it 
-                                            saveConfigs()
-                                        },
-                                        label = { Text("Model Name", color = Color(0x88FFFFFF), fontSize = 10.sp) },
-                                        trailingIcon = {
-                                            IconButton(onClick = { isDropdownExpanded = !isDropdownExpanded }) {
-                                                Text("▼", color = Color.White, fontSize = 8.sp)
-                                            }
-                                        },
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF8A2BE2),
-                                            unfocusedBorderColor = Color(0x22FFFFFF),
-                                            focusedLabelColor = Color(0xFF8A2BE2)
-                                        ),
-                                        textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 12.sp),
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    DropdownMenu(
-                                        expanded = isDropdownExpanded,
-                                        onDismissRequest = { isDropdownExpanded = false },
-                                        modifier = Modifier.background(Color(0xFF17172B))
-                                    ) {
-                                        listOf(
-                                            "gemini-3.5-flash",
-                                            "gemini-3.1-pro",
-                                            "gemini-3-flash",
-                                            "gemini-3.1-flash-lite",
-                                            "gemini-2.5-pro",
-                                            "gemini-2.5-flash",
-                                            "gemini-2.5-flash-lite"
-                                        ).forEach { modelName ->
-                                            DropdownMenuItem(
-                                                text = { Text(modelName, color = Color.White, fontSize = 12.sp) },
-                                                onClick = {
-                                                    selectedModel = modelName
-                                                    isDropdownExpanded = false
-                                                    saveConfigs()
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Toggle Automation Button
-                                Button(
-                                    onClick = { 
-                                        if (apiKey.isEmpty() && !isAutomationEnabled) {
-                                            addLog("Harap masukkan API Key terlebih dahulu!")
-                                        } else {
-                                            isAutomationEnabled = !isAutomationEnabled
-                                            addLog(if (isAutomationEnabled) "Otomatisasi diaktifkan." else "Otomatisasi dijeda.")
-                                            if (isAutomationEnabled) {
-                                                webViewInstance?.evaluateJavascript("javascript:if(typeof window.startScan === 'function') window.startScan();", null)
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isAutomationEnabled) Color(0xFFFF5252) else Color(0xFF8A2BE2)
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp)
-                                        .shadow(
-                                            elevation = 8.dp,
-                                            shape = RoundedCornerShape(12.dp),
-                                            spotColor = if (isAutomationEnabled) Color(0xFFFF5252) else Color(0xFF8A2BE2)
-                                        )
-                                ) {
-                                    Text(
-                                        text = if (isAutomationEnabled) "⏸" else "▶",
-                                        color = Color.White,
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (isAutomationEnabled) "Pause" else "Start",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
-                                }
+                                Text(
+                                    text = "➡️",
+                                    color = Color.White,
+                                    fontSize = 12.sp
+                                )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Live Log Monitor Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Log Monitor:",
-                            color = Color(0xFF00FFFF),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "Bagikan Log",
-                                color = Color(0xFF00FFFF),
-                                fontSize = 11.sp,
-                                modifier = Modifier.clickable {
-                                    val logContent = com.example.moodleautomator.FileLogger.getLogContent()
-                                    val shareIntent = android.content.Intent().apply {
-                                        action = android.content.Intent.ACTION_SEND
-                                        putExtra(android.content.Intent.EXTRA_TEXT, logContent)
-                                        type = "text/plain"
-                                    }
-                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Bagikan Log Debug"))
-                                }
-                            )
-                            Text(
-                                text = "Bersihkan Log",
-                                color = Color(0x66FFFFFF),
-                                fontSize = 11.sp,
-                                modifier = Modifier.clickable { 
-                                    logs = listOf("Log dibersihkan.") 
-                                    com.example.moodleautomator.FileLogger.clearLogs()
-                                }
-                            )
-                        }
-                    }
-                    
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Console-like Log Monitor
-                    val listState = rememberLazyListState()
-                    
-                    LaunchedEffect(logs.size) {
-                        if (logs.isNotEmpty()) {
-                            listState.animateScrollToItem(logs.size - 1)
-                        }
+                    // Mini Log display (last 1-2 items)
+                    val displayLogs = remember(logs) {
+                        logs.takeLast(2)
                     }
-
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(90.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF0A0A14))
-                            .border(1.dp, Color(0x11FFFFFF), RoundedCornerShape(12.dp))
-                            .padding(8.dp)
+                            .background(Color(0xFF04040A), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(logs) { logMsg ->
-                                Text(
-                                    text = "> $logMsg",
-                                    color = if (logMsg.startsWith("ERROR")) Color(0xFFFF5252) else if (logMsg.contains("memilih")) Color(0xFF00FF87) else Color(0xFFB0B0C3),
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(vertical = 1.dp)
-                                )
-                            }
+                        displayLogs.forEach { logMsg ->
+                            Text(
+                                text = "> $logMsg",
+                                color = if (logMsg.startsWith("ERROR") || logMsg.startsWith("❌")) Color(0xFFFF5252) else if (logMsg.contains("memilih") || logMsg.contains("aktif")) Color(0xFF00FF87) else Color(0xFF90909A),
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                maxLines = 1,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
