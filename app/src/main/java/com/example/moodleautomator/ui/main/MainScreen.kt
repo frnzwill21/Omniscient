@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,6 +57,21 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+
+    // Responsive scaling variables
+    val paddingSmall = (screenWidth * 0.02f).coerceAtLeast(8.dp)
+    val paddingMedium = (screenWidth * 0.04f).coerceAtLeast(16.dp)
+    val paddingLarge = (screenWidth * 0.06f).coerceAtLeast(24.dp)
+    
+    val buttonSize = (screenWidth * 0.11f).coerceIn(40.dp, 48.dp)
+    
+    val textTitleSize = (screenWidth * 0.038f).value.coerceIn(14f, 18f).sp
+    val textNormalSize = (screenWidth * 0.035f).value.coerceIn(13f, 16f).sp
+    val textLogSize = (screenWidth * 0.028f).value.coerceIn(10f, 13f).sp
+    val badgeTextSize = (screenWidth * 0.025f).value.coerceIn(9f, 11f).sp
     
     // SharedPreferences for saving configurations and usage stats
     val sharedPrefs = remember { 
@@ -190,7 +206,7 @@ fun MainScreen(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 480.dp)
+                    .heightIn(max = screenHeight * 0.65f)
                     .border(
                         width = 1.5.dp,
                         brush = Brush.verticalGradient(
@@ -205,13 +221,13 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .padding(horizontal = paddingMedium, vertical = paddingMedium)
                 ) {
                     // Pull/Drag Indicator
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
-                            .width(40.dp)
+                            .width(screenWidth * 0.1f)
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
                             .background(Color(0x44FFFFFF))
@@ -228,15 +244,15 @@ fun MainScreen(
                             text = "Konfigurasi Otomatisasi",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                            fontSize = (textTitleSize.value + 2f).sp
                         )
                         IconButton(
                             onClick = { showSettings = false },
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(buttonSize)
                                 .background(Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
                         ) {
-                            Text("✕", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("✕", color = Color.White, fontSize = textNormalSize, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -262,7 +278,7 @@ fun MainScreen(
                                 OutlinedTextField(
                                     value = newKeyInput,
                                     onValueChange = { newKeyInput = it },
-                                    label = { Text("Tambah API Key Gemini", color = Color(0x88FFFFFF), fontSize = 11.sp) },
+                                    label = { Text("Tambah API Key Gemini", color = Color(0x88FFFFFF), fontSize = textLogSize) },
                                     placeholder = { Text("AIzaSy...", color = Color(0x44FFFFFF)) },
                                     visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
                                     trailingIcon = {
@@ -270,7 +286,7 @@ fun MainScreen(
                                             Text(
                                                 text = if (showApiKey) "👁" else "🙈",
                                                 color = Color.White,
-                                                fontSize = 16.sp
+                                                fontSize = textTitleSize
                                             )
                                         }
                                     },
@@ -281,7 +297,7 @@ fun MainScreen(
                                         focusedLabelColor = Color(0xFF8A2BE2),
                                         cursorColor = Color(0xFF8A2BE2)
                                     ),
-                                    textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 12.sp),
+                                    textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = textNormalSize),
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true
@@ -306,7 +322,7 @@ fun MainScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.height(56.dp)
                                 ) {
-                                    Text("➕", color = Color.White, fontSize = 14.sp)
+                                    Text("➕", color = Color.White, fontSize = textNormalSize)
                                 }
                             }
 
@@ -314,7 +330,7 @@ fun MainScreen(
 
                             // Horizontal Scrollable Row for API Key Chips
                             if (apiKeysList.isNotEmpty()) {
-                                Text("Daftar API Key Anda (${apiKeysList.size}):", color = Color(0x88FFFFFF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("Daftar API Key Anda (${apiKeysList.size}):", color = Color(0x88FFFFFF), fontSize = textLogSize, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Row(
                                     modifier = Modifier
@@ -339,13 +355,13 @@ fun MainScreen(
                                                 Text(
                                                     text = "#${index + 1}: $truncatedKey",
                                                     color = Color.White,
-                                                    fontSize = 10.sp,
+                                                    fontSize = textLogSize,
                                                     fontFamily = FontFamily.Monospace
                                                 )
                                                 Text(
                                                     text = "❌",
                                                     color = Color(0xFFFF5252),
-                                                    fontSize = 10.sp,
+                                                    fontSize = textLogSize,
                                                     modifier = Modifier.clickable {
                                                         val updatedKeys = apiKeysList.toMutableList().apply { removeAt(index) }
                                                         apiKey = updatedKeys.joinToString(",")
@@ -357,7 +373,7 @@ fun MainScreen(
                                     }
                                 }
                             } else {
-                                Text("Belum ada API Key aktif. Masukkan & klik + untuk menambahkan.", color = Color(0xFFFF5252), fontSize = 10.sp)
+                                Text("Belum ada API Key aktif. Masukkan & klik + untuk menambahkan.", color = Color(0xFFFF5252), fontSize = textLogSize)
                             }
                         }
 
@@ -371,8 +387,8 @@ fun MainScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Model Gemini", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Pilih model kecerdasan buatan", color = Color(0x88FFFFFF), fontSize = 10.sp)
+                                Text("Model Gemini", color = Color.White, fontSize = textNormalSize, fontWeight = FontWeight.Bold)
+                                Text("Pilih model kecerdasan buatan", color = Color(0x88FFFFFF), fontSize = textLogSize)
                             }
                             Box {
                                 Button(
@@ -380,9 +396,9 @@ fun MainScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text(selectedModel, color = Color.White, fontSize = 11.sp)
+                                    Text(selectedModel, color = Color.White, fontSize = textNormalSize)
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("▼", color = Color.White, fontSize = 8.sp)
+                                    Text("▼", color = Color.White, fontSize = textLogSize)
                                 }
                                 DropdownMenu(
                                     expanded = isDropdownExpanded,
@@ -398,7 +414,7 @@ fun MainScreen(
                                         "gemini-1.5-pro"
                                     ).forEach { modelName ->
                                         DropdownMenuItem(
-                                            text = { Text(modelName, color = Color.White, fontSize = 12.sp) },
+                                            text = { Text(modelName, color = Color.White, fontSize = textNormalSize) },
                                             onClick = {
                                                 selectedModel = modelName
                                                 isDropdownExpanded = false
@@ -419,8 +435,8 @@ fun MainScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Google Search Grounding", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Mencari info real-time di internet", color = Color(0x88FFFFFF), fontSize = 10.sp)
+                                Text("Google Search Grounding", color = Color.White, fontSize = textNormalSize, fontWeight = FontWeight.Bold)
+                                Text("Mencari info real-time di internet", color = Color(0x88FFFFFF), fontSize = textLogSize)
                             }
                             Switch(
                                 checked = enableSearch,
@@ -446,8 +462,8 @@ fun MainScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Reasoning / Thinking Level", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Gunakan berpikir mendalam (2.0+)", color = Color(0x88FFFFFF), fontSize = 10.sp)
+                                Text("Reasoning / Thinking Level", color = Color.White, fontSize = textNormalSize, fontWeight = FontWeight.Bold)
+                                Text("Gunakan berpikir mendalam (2.0+)", color = Color(0x88FFFFFF), fontSize = textLogSize)
                             }
                             var isThinkingMenuExpanded by remember { mutableStateOf(false) }
                             val thinkingText = when(thinkingBudget) {
@@ -463,9 +479,9 @@ fun MainScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text(thinkingText, color = Color.White, fontSize = 11.sp)
+                                    Text(thinkingText, color = Color.White, fontSize = textNormalSize)
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("▼", color = Color.White, fontSize = 8.sp)
+                                    Text("▼", color = Color.White, fontSize = textLogSize)
                                 }
                                 DropdownMenu(
                                     expanded = isThinkingMenuExpanded,
@@ -473,7 +489,7 @@ fun MainScreen(
                                     modifier = Modifier.background(Color(0xFF17172B))
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Off (Cepat & Hemat)", color = Color.White, fontSize = 12.sp) },
+                                        text = { Text("Off (Cepat & Hemat)", color = Color.White, fontSize = textNormalSize) },
                                         onClick = { 
                                             thinkingBudget = 0 
                                             isThinkingMenuExpanded = false
@@ -481,7 +497,7 @@ fun MainScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Standard (1024 tokens)", color = Color.White, fontSize = 12.sp) },
+                                        text = { Text("Standard (1024 tokens)", color = Color.White, fontSize = textNormalSize) },
                                         onClick = { 
                                             thinkingBudget = 1024 
                                             isThinkingMenuExpanded = false
@@ -489,7 +505,7 @@ fun MainScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("High (2048 tokens)", color = Color.White, fontSize = 12.sp) },
+                                        text = { Text("High (2048 tokens)", color = Color.White, fontSize = textNormalSize) },
                                         onClick = { 
                                             thinkingBudget = 2048 
                                             isThinkingMenuExpanded = false
@@ -497,7 +513,7 @@ fun MainScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Ultra (4096 tokens)", color = Color.White, fontSize = 12.sp) },
+                                        text = { Text("Ultra (4096 tokens)", color = Color.White, fontSize = textNormalSize) },
                                         onClick = { 
                                             thinkingBudget = 4096 
                                             isThinkingMenuExpanded = false
@@ -514,14 +530,14 @@ fun MainScreen(
                         Text(
                             text = "Konsol Log Lengkap:",
                             color = Color(0xFF00FFFF),
-                            fontSize = 11.sp,
+                            fontSize = textNormalSize,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(100.dp)
+                                .height(120.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFF07070F))
                                 .border(1.dp, Color(0x11FFFFFF), RoundedCornerShape(8.dp))
@@ -538,7 +554,7 @@ fun MainScreen(
                                     Text(
                                         text = "> $logMsg",
                                         color = if (logMsg.startsWith("ERROR") || logMsg.startsWith("❌")) Color(0xFFFF5252) else if (logMsg.contains("memilih") || logMsg.contains("aktif")) Color(0xFF00FF87) else Color(0xFFB0B0C3),
-                                        fontSize = 10.sp,
+                                        fontSize = textLogSize,
                                         fontFamily = FontFamily.Monospace
                                     )
                                 }
@@ -566,7 +582,7 @@ fun MainScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Bagikan Log", color = Color.White, fontSize = 11.sp)
+                                Text("Bagikan Log", color = Color.White, fontSize = textNormalSize)
                             }
                             Button(
                                 onClick = {
@@ -577,7 +593,7 @@ fun MainScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Bersihkan Log", color = Color(0xFF888888), fontSize = 11.sp)
+                                Text("Bersihkan Log", color = Color(0xFF888888), fontSize = textNormalSize)
                             }
                         }
                     }
@@ -592,8 +608,8 @@ fun MainScreen(
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(12.dp)
+                .width(screenWidth * 0.94f)
+                .padding(bottom = paddingMedium)
         ) {
             ElevatedCard(
                 shape = RoundedCornerShape(16.dp),
@@ -623,7 +639,7 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = paddingMedium, vertical = paddingSmall)
                 ) {
                     // Control elements in a horizontal Row
                     Row(
@@ -640,7 +656,7 @@ fun MainScreen(
                                 text = "🤖 Gemini Auto",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+                                fontSize = textTitleSize
                             )
                             
                             val badgeBg = if (isAutomationEnabled) Color(0xFF00FF87) else Color(0xFFFF5252)
@@ -668,12 +684,12 @@ fun MainScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(badgeBg.copy(alpha = 0.2f))
                                     .border(1.dp, badgeBg, RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
                                     text = badgeText,
                                     color = badgeBg,
-                                    fontSize = 8.sp,
+                                    fontSize = badgeTextSize,
                                     fontWeight = FontWeight.Black
                                 )
                             }
@@ -699,7 +715,7 @@ fun MainScreen(
                                     }
                                 },
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(buttonSize)
                                     .background(
                                         if (isAutomationEnabled) Color(0xFFFF5252) else Color(0xFF8A2BE2),
                                         RoundedCornerShape(8.dp)
@@ -708,7 +724,7 @@ fun MainScreen(
                                 Text(
                                     text = if (isAutomationEnabled) "⏸" else "▶",
                                     color = Color.White,
-                                    fontSize = 11.sp,
+                                    fontSize = textNormalSize,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -717,13 +733,13 @@ fun MainScreen(
                             IconButton(
                                 onClick = { showSettings = true },
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(buttonSize)
                                     .background(Color(0x1AFFFFFF), RoundedCornerShape(8.dp))
                             ) {
                                 Text(
                                     text = "⚙️",
                                     color = Color.White,
-                                    fontSize = 12.sp
+                                    fontSize = textNormalSize
                                 )
                             }
 
@@ -731,13 +747,13 @@ fun MainScreen(
                             IconButton(
                                 onClick = { isMinimized = true },
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(buttonSize)
                                     .background(Color(0x1AFFFFFF), RoundedCornerShape(8.dp))
                             ) {
                                 Text(
                                     text = "➡️",
                                     color = Color.White,
-                                    fontSize = 12.sp
+                                    fontSize = textNormalSize
                                 )
                             }
                         }
@@ -759,7 +775,7 @@ fun MainScreen(
                             Text(
                                 text = "> $logMsg",
                                 color = if (logMsg.startsWith("ERROR") || logMsg.startsWith("❌")) Color(0xFFFF5252) else if (logMsg.contains("memilih") || logMsg.contains("aktif")) Color(0xFF00FF87) else Color(0xFF90909A),
-                                fontSize = 9.sp,
+                                fontSize = textLogSize,
                                 fontFamily = FontFamily.Monospace,
                                 maxLines = 1,
                                 modifier = Modifier.fillMaxWidth()
