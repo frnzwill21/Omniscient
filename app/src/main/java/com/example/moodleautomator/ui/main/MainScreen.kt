@@ -61,17 +61,17 @@ fun MainScreen(
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
 
-    // Responsive scaling variables
-    val paddingSmall = (screenWidth * 0.02f).coerceAtLeast(8.dp)
-    val paddingMedium = (screenWidth * 0.04f).coerceAtLeast(16.dp)
-    val paddingLarge = (screenWidth * 0.06f).coerceAtLeast(24.dp)
+    // Responsive scaling variables (Enlarged size set)
+    val paddingSmall = (screenWidth * 0.025f).coerceAtLeast(10.dp)
+    val paddingMedium = (screenWidth * 0.045f).coerceAtLeast(18.dp)
+    val paddingLarge = (screenWidth * 0.07f).coerceAtLeast(28.dp)
     
-    val buttonSize = (screenWidth * 0.11f).coerceIn(40.dp, 48.dp)
+    val buttonSize = (screenWidth * 0.13f).coerceIn(46.dp, 54.dp)
     
-    val textTitleSize = (screenWidth * 0.038f).value.coerceIn(14f, 18f).sp
-    val textNormalSize = (screenWidth * 0.035f).value.coerceIn(13f, 16f).sp
-    val textLogSize = (screenWidth * 0.028f).value.coerceIn(10f, 13f).sp
-    val badgeTextSize = (screenWidth * 0.025f).value.coerceIn(9f, 11f).sp
+    val textTitleSize = (screenWidth * 0.042f).value.coerceIn(16f, 20f).sp
+    val textNormalSize = (screenWidth * 0.038f).value.coerceIn(14f, 17f).sp
+    val textLogSize = (screenWidth * 0.032f).value.coerceIn(12f, 15f).sp
+    val badgeTextSize = (screenWidth * 0.028f).value.coerceIn(10f, 12f).sp
     
     // SharedPreferences for saving configurations and usage stats
     val sharedPrefs = remember { 
@@ -639,7 +639,7 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = paddingMedium, vertical = paddingSmall)
+                        .padding(horizontal = 12.dp, vertical = paddingSmall)
                 ) {
                     // Control elements in a horizontal Row
                     Row(
@@ -653,7 +653,7 @@ fun MainScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "🤖 Gemini Auto",
+                                text = "🤖 Gemini",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = textTitleSize
