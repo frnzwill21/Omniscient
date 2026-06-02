@@ -1,40 +1,6 @@
 (function() {
     console.log("Moodle Automator script injected successfully.");
 
-    // Helper function to convert image URL to base64 using fetch (preserves cookies)
-    function imageToBase64(imgUrl, callback) {
-        if (!imgUrl) {
-            callback(null, null);
-            return;
-        }
-        
-        console.log("Attempting to fetch image for base64 conversion:", imgUrl);
-        fetch(imgUrl, { credentials: 'include' })
-            .then(response => {
-                if (!response.ok) throw new Error("Network response was not ok");
-                return response.blob();
-            })
-            .then(blob => {
-                const reader = new FileReader();
-                reader.onloadend = function() {
-                    const dataUrl = reader.result;
-                    const commaIdx = dataUrl.indexOf(',');
-                    if (commaIdx !== -1) {
-                        const base64data = dataUrl.substring(commaIdx + 1);
-                        const mimeType = blob.type || "image/png";
-                        callback(base64data, mimeType);
-                    } else {
-                        callback(null, null);
-                    }
-                };
-                reader.readAsDataURL(blob);
-            })
-            .catch(err => {
-                console.error("Error loading image for base64:", err);
-                callback(null, null);
-            });
-    }
-
     // Helper function to extract question and choices
     function scanPage(force = false) {
         // Moodle questions are usually in div.que
@@ -110,19 +76,38 @@
             const imgEl = qtextDiv.querySelector('img') || answerDiv.querySelector('img');
             if (imgEl && imgEl.src) {
                 console.log("Found image in kuis:", imgEl.src);
-                imageToBase64(imgEl.src, function(base64Data, mimeType) {
-                    if (base64Data) {
-                        console.log("Image successfully converted to base64. Mime:", mimeType);
-                        if (window.MoodleBridge) {
-                            window.MoodleBridge.onQuestionScrapedWithImage(questionText, JSON.stringify(choices), base64Data, mimeType);
-                        }
-                    } else {
-                        console.log("Image conversion failed, sending text-only.");
-                        if (window.MoodleBridge) {
-                            window.MoodleBridge.onQuestionScraped(questionText, JSON.stringify(choices));
-                        }
-                    }
-                });
+                
+                // Solve Incomplete Loading: Check if image is fully loaded in DOM
+                if (!imgEl.complete || imgEl.naturalWidth === 0) {
+                    console.log("Image not fully loaded yet. Waiting for load event...");
+                    // Reset processed flag so it scans again upon load
+                    delete queDiv.dataset.processed;
+                    
+                    const onLoadCallback = () => {
+                        imgEl.removeEventListener('load', onLoadCallback);
+                        imgEl.removeEventListener('error', onErrorCallback);
+                        console.log("Image load completed. Retrying scanPage...");
+                        scanPage(force);
+                    };
+                    const onErrorCallback = () => {
+                        imgEl.removeEventListener('load', onLoadCallback);
+                        imgEl.removeEventListener('error', onErrorCallback);
+                        console.log("Image load failed. Scanning page anyway...");
+                        scanPage(force);
+                    };
+                    
+                    imgEl.addEventListener('load', onLoadCallback);
+                    imgEl.addEventListener('error', onErrorCallback);
+                    return; // Abort this scan, wait for load
+                }
+
+                // Send image URL to Android. Kotlin will download it directly to bypass CORS & Truncation!
+                if (window.MoodleBridge) {
+                    console.log("Sending image URL to Android:", imgEl.src);
+                    window.MoodleBridge.onQuestionScrapedWithImage(questionText, JSON.stringify(choices), imgEl.src);
+                } else {
+                    console.error("MoodleBridge not found on window object.");
+                }
             } else {
                 // Text only
                 if (window.MoodleBridge) {

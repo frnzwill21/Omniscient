@@ -72,8 +72,8 @@ object GeminiService {
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
-            conn.connectTimeout = 8000 // 8 seconds timeout
-            conn.readTimeout = 15000 // 15 seconds timeout
+            conn.connectTimeout = 15000 // 15 seconds timeout
+            conn.readTimeout = 60000 // 60 seconds timeout (crucial for models with thinking budget)
             conn.doOutput = true
 
             // Create JSON Request
