@@ -20,6 +20,8 @@ class MoodleBridge(
     private val isAutomationEnabled: () -> Boolean,
     private val getThinkingBudget: () -> Int,
     private val getEnableSearch: () -> Boolean,
+    private val getEnableSearchFallback: () -> Boolean,
+    private val getTavilyApiKey: () -> String,
     private val pauseAutomation: () -> Unit, // Force pause on network failure
     private val onLog: (String) -> Unit
 ) {
@@ -87,6 +89,9 @@ class MoodleBridge(
             var globalRetryCount = 0
             val maxGlobalRetries = 3
 
+            var activeQuestion = question
+            var isSearchPerformed = false
+
             while (globalRetryCount < maxGlobalRetries && !success && isAutomationEnabled()) {
                 if (globalRetryCount > 0) {
                     onLog("⚠️ Semua API Key terkena rate limit (429). Mencoba kembali seluruh kunci (Percobaan $globalRetryCount/$maxGlobalRetries) dalam 60 detik...")
@@ -144,7 +149,7 @@ class MoodleBridge(
                         val geminiResponse = GeminiService.getAnswer(
                             apiKey = key,
                             modelName = model,
-                            question = question,
+                            question = activeQuestion,
                             choicesJson = choicesJson,
                             thinkingBudget = thinkingBudget,
                             enableSearch = enableSearch,
@@ -163,8 +168,35 @@ class MoodleBridge(
                             }
                             success = true
                             break // Succeeded! Stop retry loop
-                        } else {
-                            // Handle specific error types
+                        } else if (geminiResponse.needSearch && getEnableSearchFallback() && !isSearchPerformed) {
+                            val query = geminiResponse.searchQuery
+                            val searchKey = getTavilyApiKey()
+                            if (query.isNullOrEmpty()) {
+                                onLog("⚠️ Gemini meminta pencarian, tapi kueri kosong. Melanjutkan...")
+                            } else if (searchKey.isEmpty()) {
+                                onLog("❌ ERROR: Gemini meminta pencarian web cadangan, tetapi API Key Tavily belum diatur!")
+                            } else {
+                                onLog("-> Gemini meminta informasi real-time. Mencari di internet via Tavily untuk: \"$query\"...")
+                                val results = TavilyService.search(query, searchKey)
+                                isSearchPerformed = true
+                                if (results.isNotEmpty()) {
+                                    onLog("-> Berhasil menemukan ${results.size} referensi web. Mengirim ulang soal ke Gemini dengan konteks...")
+                                    val contextBuilder = StringBuilder()
+                                    contextBuilder.append("HASIL PENCARIAN INTERNET:\n")
+                                    results.forEach { res ->
+                                        contextBuilder.append("- [${res.title}]: ${res.content}\n")
+                                    }
+                                    contextBuilder.append("\nGunakan hasil pencarian di atas untuk menjawab pertanyaan berikut secara akurat.\n\n")
+                                    activeQuestion = contextBuilder.toString() + question
+                                    continue // Re-run immediately with the same API key and enriched question context
+                                } else {
+                                    onLog("⚠️ Pencarian tidak menemukan hasil. Melanjutkan...")
+                                }
+                            }
+                        }
+
+                        // Handle specific error types or fallback when search is not requested or not enabled
+                        if (!success) {
                             when (geminiResponse.errorType) {
                                 GeminiError.NETWORK_ERROR -> {
                                     networkRetryCount++

@@ -92,6 +92,12 @@ fun MainScreen(
     var enableSearch by remember { 
         mutableStateOf(sharedPrefs.getBoolean("enable_search", false)) 
     }
+    var enableSearchFallback by remember { 
+        mutableStateOf(sharedPrefs.getBoolean("enable_search_fallback", false)) 
+    }
+    var tavilyApiKey by remember { 
+        mutableStateOf(sharedPrefs.getString("tavily_api_key", "") ?: "") 
+    }
     
     var isAutomationEnabled by remember { mutableStateOf(false) }
     var logs by remember { mutableStateOf(listOf("Sistem siap. Silakan login di kuis Moodle.")) }
@@ -106,6 +112,8 @@ fun MainScreen(
             putString("selected_model", selectedModel)
             putInt("thinking_budget", thinkingBudget)
             putBoolean("enable_search", enableSearch)
+            putBoolean("enable_search_fallback", enableSearchFallback)
+            putString("tavily_api_key", tavilyApiKey)
             apply()
         }
     }
@@ -119,6 +127,7 @@ fun MainScreen(
     }
 
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    var triggerTestScan by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F1A))) {
         
@@ -164,10 +173,19 @@ fun MainScreen(
                         isAutomationEnabled = { isAutomationEnabled },
                         getThinkingBudget = { thinkingBudget },
                         getEnableSearch = { enableSearch },
+                        getEnableSearchFallback = { enableSearchFallback },
+                        getTavilyApiKey = { tavilyApiKey },
                         pauseAutomation = { isAutomationEnabled = false },
                         onLog = { msg -> addLog(msg) }
                     )
                     addJavascriptInterface(bridge, "MoodleBridge")
+                    
+                    triggerTestScan = {
+                        bridge.onQuestionScraped(
+                            "Siapakah klub sepak bola yang memenangkan gelar juara Liga Champions UEFA pada musim 2024/2025?",
+                            """[{"id":"opt0","name":"q1","value":"0","text":"Real Madrid"},{"id":"opt1","name":"q1","value":"1","text":"Manchester City"},{"id":"opt2","name":"q1","value":"2","text":"Borussia Dortmund"},{"id":"opt3","name":"q1","value":"3","text":"Bayern Munchen"}]"""
+                        )
+                    }
                     
                     loadUrl("https://belajar.smkn4bdg.sch.id")
                     webViewInstance = this
@@ -464,6 +482,70 @@ fun MainScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        // Tavily Search Fallback Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Pencarian Cadangan (Tavily)", color = Color.White, fontSize = textNormalSize, fontWeight = FontWeight.Bold)
+                                Text("Pencarian alternatif jika key gratis terkena 429", color = Color(0x88FFFFFF), fontSize = textLogSize)
+                            }
+                            Switch(
+                                checked = enableSearchFallback,
+                                onCheckedChange = { 
+                                    enableSearchFallback = it 
+                                    saveConfigs()
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color(0xFF00FFFF),
+                                    checkedTrackColor = Color(0x3300FFFF),
+                                    uncheckedThumbColor = Color(0xFF888888),
+                                    uncheckedTrackColor = Color(0x11FFFFFF)
+                                )
+                            )
+                        }
+
+                        AnimatedVisibility(visible = enableSearchFallback) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                                var showTavilyKey by remember { mutableStateOf(false) }
+                                OutlinedTextField(
+                                    value = tavilyApiKey,
+                                    onValueChange = { 
+                                        tavilyApiKey = it 
+                                        saveConfigs()
+                                    },
+                                    label = { Text("Tavily API Key", color = Color(0x88FFFFFF), fontSize = textLogSize) },
+                                    placeholder = { Text("tvly-xxxx", color = Color(0x44FFFFFF)) },
+                                    visualTransformation = if (showTavilyKey) VisualTransformation.None else PasswordVisualTransformation(),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showTavilyKey = !showTavilyKey }) {
+                                            Text(
+                                                text = if (showTavilyKey) "👁" else "🙈",
+                                                color = Color.White,
+                                                fontSize = textTitleSize
+                                            )
+                                        }
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF8A2BE2),
+                                        unfocusedBorderColor = Color(0x44FFFFFF),
+                                        focusedLabelColor = Color(0xFF8A2BE2),
+                                        cursorColor = Color(0xFF8A2BE2)
+                                    ),
+                                    textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = textNormalSize),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         // Reasoning Config
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -666,7 +748,15 @@ fun MainScreen(
                                 text = "🤖 Gemini",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = textTitleSize
+                                fontSize = textTitleSize,
+                                modifier = Modifier.clickable {
+                                    if (isAutomationEnabled) {
+                                        addLog("Menjalankan pengujian offline Tavily Fallback...")
+                                        triggerTestScan?.invoke()
+                                    } else {
+                                        addLog("Harap aktifkan otomatisasi (klik PLAY) sebelum menjalankan pengujian!")
+                                    }
+                                }
                             )
                             
                             val badgeBg = if (isAutomationEnabled) Color(0xFF00FF87) else Color(0xFFFF5252)

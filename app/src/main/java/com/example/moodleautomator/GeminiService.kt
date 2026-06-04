@@ -25,7 +25,9 @@ data class GeminiResponse(
     val completionTokens: Int = 0,
     val totalTokens: Int = 0,
     val errorType: GeminiError = GeminiError.NONE,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val needSearch: Boolean = false,
+    val searchQuery: String? = null
 )
 
 object GeminiService {
@@ -58,7 +60,12 @@ object GeminiService {
                 1. Jika ada gambar yang dilampirkan, analisis gambar tersebut dengan teliti untuk membantu mengidentifikasi soal atau pilihan jawaban.
                 2. Lakukan penalaran langkah-demi-langkah secara logis sebelum menentukan pilihan.
                 3. Jangan berasumsi atau menebak informasi yang tidak ada. Jika ragu, pilihlah opsi yang secara logis dan ilmiah paling mendekati kebenaran berdasarkan data yang ada atau hasil pencarian Google Search.
-                4. Anda HARUS memberikan output hanya berupa JSON yang valid dengan format berikut, tanpa penjelasan tambahan apa pun di luar JSON:
+                4. Jika soal menanyakan informasi real-time terbaru, fakta/kejadian baru-baru ini (misalnya beberapa minggu/bulan lalu) yang berada di luar basis pengetahuan Anda sehingga Anda ragu atau tidak tahu jawabannya secara pasti, Anda boleh meminta aplikasi melakukan pencarian web. Kembalikan output JSON dengan format berikut:
+                {
+                  "need_search": true,
+                  "search_query": "kata kunci pencarian bahasa Indonesia yang spesifik untuk mencari jawaban"
+                }
+                5. Jika Anda yakin tahu jawabannya atau informasi pencarian sudah disertakan, Anda HARUS memberikan output hanya berupa JSON yang valid dengan format berikut, tanpa penjelasan tambahan apa pun di luar JSON:
                 {
                   "selected_value": "nilai_dari_value_pilihan"
                 }
@@ -148,9 +155,18 @@ object GeminiService {
                         
                         val cleanText = text.trim()
                         val resultJson = JSONObject(cleanText)
-                        val answer = resultJson.optString("selected_value", null)
+                        val needSearch = resultJson.optBoolean("need_search", false)
+                        val searchQuery = if (needSearch && resultJson.has("search_query")) resultJson.getString("search_query") else null
+                        val answer = if (needSearch) null else if (resultJson.has("selected_value")) resultJson.getString("selected_value") else null
                         
-                        return@withContext GeminiResponse(answer, promptTokens, completionTokens, totalTokens)
+                        return@withContext GeminiResponse(
+                            answer = answer,
+                            promptTokens = promptTokens,
+                            completionTokens = completionTokens,
+                            totalTokens = totalTokens,
+                            needSearch = needSearch,
+                            searchQuery = searchQuery
+                        )
                     }
                 }
                 return@withContext GeminiResponse(null, promptTokens, completionTokens, totalTokens)
